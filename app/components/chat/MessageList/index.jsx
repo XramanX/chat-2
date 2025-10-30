@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import styles from "./MessageList.module.scss";
 import MessageBubble from "../MessageBubble";
 
@@ -17,21 +17,35 @@ export default function MessageList({ messages = [] }) {
     el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
   }, [messages]);
 
+  const uniqueMessages = useMemo(() => {
+    const seen = new Set();
+    return messages.filter((m, idx) => {
+      if (!m || m.id == null) return true;
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  }, [messages]);
+
   return (
     <div
       ref={listRef}
       className={`${styles.list} ${mounted ? styles.mounted : ""}`}
     >
-      {messages.map((m) => (
-        <div
-          key={m.id}
-          className={`${styles.row} ${
-            m.role === "user" ? styles.right : styles.left
-          }`}
-        >
-          <MessageBubble message={m} />
-        </div>
-      ))}
+      {uniqueMessages.map((m, idx) => {
+        const key =
+          m.id != null ? `${m.id}-${m.createdAt ?? idx}` : `msg-${idx}`;
+        return (
+          <div
+            key={key}
+            className={`${styles.row} ${
+              m.role === "user" ? styles.right : styles.left
+            }`}
+          >
+            <MessageBubble message={m} />
+          </div>
+        );
+      })}
     </div>
   );
 }

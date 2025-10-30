@@ -29,8 +29,8 @@ It’s designed to replicate the smooth, minimal experience of ChatGPT — compl
 
 ### 💾 Local Persistence
 
-- All chats stored locally using IndexedDB — no backend required.
-- Supports multiple chat threads with create, delete, and rename.
+- All chats stored locally using IndexedDB, no backend required.
+- Supports multiple chat threads with create, delete.
 - Recovers your last active chat automatically after refresh.
 
 ### 💬 Modern Chat UI
@@ -43,14 +43,6 @@ It’s designed to replicate the smooth, minimal experience of ChatGPT — compl
 
 - Reusable modals for new chat creation and delete confirmations.
 - Centered, portal-based design for accessibility and clarity.
-
-### 🧠 Architecture
-
-- Modular and scalable file structure (chat components, modals, UI atoms).
-- Optimized for performance with requestAnimationFrame batching.
-- Client-only — no server dependencies required for local use.
-
----
 
 ## 📂 Structure
 

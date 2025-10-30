@@ -8,12 +8,7 @@ import ChatList from "../components/chat/ChatList";
 import { getChatList } from "../utils/chatStorage";
 import styles from "./ChatPage.module.scss";
 
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-2.5-flash";
-const BASE_URL = process.env.NEXT_PUBLIC_GEMINI_BASE_URL;
-const STREAM_URL = `${BASE_URL}/${MODEL}:streamGenerateContent?alt=sse&key=${encodeURIComponent(
-  API_KEY
-)}`;
+const STREAM_URL = "/api/stream";
 
 export default function ChatPage() {
   const [activeChatId, setActiveChatId] = useState(null);
@@ -34,7 +29,6 @@ export default function ChatPage() {
     sendMessage(t);
   };
 
-  // 🧠 Fetch title whenever activeChatId changes
   useEffect(() => {
     async function fetchTitle() {
       if (!activeChatId) {

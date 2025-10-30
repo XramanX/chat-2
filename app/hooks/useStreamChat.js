@@ -121,7 +121,7 @@ export default function useStreamChat(streamUrl, options = {}) {
       const body = { contents: [{ parts: [{ text: userText }] }] };
 
       try {
-        const res = await fetch(streamUrl, {
+        const res = await fetch("/api/stream", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

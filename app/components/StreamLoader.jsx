@@ -4,7 +4,6 @@ import styles from "./StreamLoader.module.scss";
 export default function StreamLoader() {
   const [phase, setPhase] = useState(0);
 
-  // Phase timeline
   useEffect(() => {
     const timers = [
       setTimeout(() => setPhase(1), 3000),

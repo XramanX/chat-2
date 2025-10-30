@@ -12,7 +12,7 @@ export default function Composer({
   const taRef = useRef(null);
 
   useEffect(() => {
-    // focus after first paint to avoid layout jitter
+    // to avoid layout jitter
     const id = requestAnimationFrame(() => taRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, []);

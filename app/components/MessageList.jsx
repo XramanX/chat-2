@@ -6,7 +6,6 @@ export default function MessageList({ messages = [] }) {
   const listRef = useRef(null);
   const [mounted, setMounted] = useState(false);
 
-  // disable entry animation until mounted
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);

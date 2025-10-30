@@ -53,7 +53,6 @@
     color: #94a3b8;
 }
 
-/* floating copy icon (outside bubble) */
 .copyFloating {
     position: absolute;
     bottom: -30px;
@@ -83,13 +82,11 @@
     transform: scale(0.95);
 }
 
-/* copied feedback (turn green briefly) */
 .copied {
     background: #ecfdf5;
     color: #16a34a;
 }
 
-/* nice smooth fade-in for icon */
 .copyFloating svg {
     transition: color 0.15s ease;
 }

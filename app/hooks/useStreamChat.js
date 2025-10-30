@@ -37,7 +37,6 @@ export default function useStreamChat(streamUrl, options = {}) {
     const msg = arr[idx];
     if (!msg) return arr;
     if (!msg.text || !String(msg.text).trim()) {
-      // remove the placeholder entirely
       const copy = arr.slice();
       copy.splice(idx, 1);
       return copy;
@@ -195,7 +194,6 @@ export default function useStreamChat(streamUrl, options = {}) {
 
               if (finishImmediate) {
                 if (bufferRef.current) {
-                  // synchronous small flush
                   const finalChunk = bufferRef.current;
                   bufferRef.current = "";
                   setMessages((prev) => {
@@ -210,7 +208,6 @@ export default function useStreamChat(streamUrl, options = {}) {
                   });
                 }
 
-                // mark finished
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantIdRef.current
@@ -233,7 +230,6 @@ export default function useStreamChat(streamUrl, options = {}) {
 
         if (bufferRef.current) scheduleFlush();
 
-        // mark assistant finished and remove if empty
         setMessages((prev) => {
           const idx = assistantIndexLocal;
           const mapped = prev.map((m, i) =>
@@ -278,7 +274,6 @@ export default function useStreamChat(streamUrl, options = {}) {
     ]
   );
 
-  // robust stop: abort, flush any buffer, mark finished, remove empty placeholder
   const stopStreaming = useCallback(() => {
     try {
       abortRef.current?.abort();
@@ -306,14 +301,12 @@ export default function useStreamChat(streamUrl, options = {}) {
       });
     } else {
       setMessages((prev) => {
-        // clear streaming flags and remove any empty assistant placeholders
         let copy = prev.map((m) =>
           m.id === assistantIdRef.current ||
           (m.role === "assistant" && m.streaming)
             ? { ...m, streaming: false }
             : m
         );
-        // try to find the assistant placeholder by id first, then fallback to any streaming assistant
         let idx = assistantIdRef.current
           ? copy.findIndex((m) => m.id === assistantIdRef.current)
           : -1;

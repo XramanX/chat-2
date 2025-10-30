@@ -1,29 +1,54 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSSEBlock } from "../utils/sseParser";
+import { loadChat, saveChat, createNewChat } from "../utils/chatStorage";
 
 export default function useStreamChat(streamUrl, options = {}) {
   const {
     singleStream = true,
     debug = false,
     finishImmediate = true,
+    chatId: externalChatId = null,
   } = options;
 
-  const [messages, setMessages] = useState([
-    {
-      id: "m0",
-      role: "assistant",
-      text: "Hi — ask me anything.",
-      streaming: false,
-    },
-  ]);
+  const [chat, setChat] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
 
+  const chatIdRef = useRef(externalChatId);
   const bufferRef = useRef("");
   const rafRef = useRef(null);
   const assistantIdxRef = useRef(null);
   const assistantIdRef = useRef(null);
   const abortRef = useRef(null);
   const nextIdRef = useRef(1);
+
+  useEffect(() => {
+    (async () => {
+      let chatData = null;
+      let idToLoad = externalChatId || localStorage.getItem("last_active_chat");
+
+      if (idToLoad) {
+        chatData = await loadChat(idToLoad);
+      }
+
+      if (!chatData) {
+        setChat(null);
+        setMessages([]);
+        return;
+      }
+
+      chatIdRef.current = idToLoad;
+      setChat(chatData);
+      setMessages(chatData.messages || []);
+      localStorage.setItem("last_active_chat", idToLoad);
+    })();
+  }, [externalChatId]);
+
+  useEffect(() => {
+    if (!chatIdRef.current || !messages.length) return;
+    const chatData = { ...chat, id: chatIdRef.current, messages };
+    saveChat(chatIdRef.current, chatData);
+  }, [messages, chat]);
 
   const findStreamingAssistantIndex = (prev) => {
     for (let i = prev.length - 1; i >= 0; --i) {
@@ -35,8 +60,7 @@ export default function useStreamChat(streamUrl, options = {}) {
   const removeIfEmpty = (arr, idx) => {
     if (idx == null || idx < 0 || idx >= arr.length) return arr;
     const msg = arr[idx];
-    if (!msg) return arr;
-    if (!msg.text || !String(msg.text).trim()) {
+    if (!msg || !msg.text?.trim()) {
       const copy = arr.slice();
       copy.splice(idx, 1);
       return copy;
@@ -54,22 +78,12 @@ export default function useStreamChat(streamUrl, options = {}) {
 
       setMessages((prev) => {
         const aid = assistantIdRef.current;
-        let idx = null;
-        if (aid) {
-          idx = prev.findIndex((m) => m.id === aid);
-          if (idx === -1) idx = null;
-        }
-        if (idx == null) idx = findStreamingAssistantIndex(prev);
-        if (idx == null) {
-          if (debug)
-            console.warn(
-              "[rAF flush] no assistant placeholder found — dropping chunk"
-            );
-          return prev;
-        }
-        const copy = prev.slice();
-        const old = copy[idx];
-        copy[idx] = { ...old, text: (old.text || "") + chunk };
+        let idx = aid ? prev.findIndex((m) => m.id === aid) : -1;
+        if (idx === -1) idx = findStreamingAssistantIndex(prev);
+        if (idx == null) return prev;
+
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], text: (copy[idx].text || "") + chunk };
         return copy;
       });
 
@@ -131,28 +145,11 @@ export default function useStreamChat(streamUrl, options = {}) {
                 : m
             )
           );
-          setIsStreaming(false);
-          assistantIdxRef.current = null;
-          assistantIdRef.current = null;
-          abortRef.current = null;
-          return;
+          throw new Error("Bad response from server");
         }
 
         const reader = res.body?.getReader();
-        if (!reader) {
-          setMessages((prev) =>
-            prev.map((m, i) =>
-              i === assistantIndexLocal
-                ? { ...m, text: "[error] stream unavailable", streaming: false }
-                : m
-            )
-          );
-          setIsStreaming(false);
-          assistantIdxRef.current = null;
-          assistantIdRef.current = null;
-          abortRef.current = null;
-          return;
-        }
+        if (!reader) throw new Error("Stream unavailable");
 
         const decoder = new TextDecoder("utf-8");
         let acc = "";
@@ -160,7 +157,6 @@ export default function useStreamChat(streamUrl, options = {}) {
 
         while (true) {
           const { done, value } = await reader.read();
-
           if (done) {
             if (acc.trim()) {
               const parsed = parseSSEBlock(acc);
@@ -174,13 +170,11 @@ export default function useStreamChat(streamUrl, options = {}) {
           }
 
           acc += decoder.decode(value, { stream: true });
-
           const parts = acc.split(/\r?\n\r?\n/);
           acc = parts.pop();
 
           for (const part of parts) {
             if (!part.trim()) continue;
-            if (debug) console.debug("[raw block preview]", part.slice(0, 300));
             const parsed = parseSSEBlock(part);
             if (!parsed) continue;
 
@@ -191,35 +185,23 @@ export default function useStreamChat(streamUrl, options = {}) {
 
             if (parsed.done) {
               endedBySignal = true;
-
               if (finishImmediate) {
                 if (bufferRef.current) {
-                  const finalChunk = bufferRef.current;
+                  const chunk = bufferRef.current;
                   bufferRef.current = "";
                   setMessages((prev) => {
-                    const aid = assistantIdRef.current;
-                    let idx = aid ? prev.findIndex((m) => m.id === aid) : -1;
-                    if (idx === -1) idx = findStreamingAssistantIndex(prev);
+                    const idx = findStreamingAssistantIndex(prev);
                     if (idx == null) return prev;
-                    const copy = prev.slice();
-                    const old = copy[idx];
-                    copy[idx] = { ...old, text: (old.text || "") + finalChunk };
+                    const copy = [...prev];
+                    copy[idx] = {
+                      ...copy[idx],
+                      text: (copy[idx].text || "") + chunk,
+                      streaming: false,
+                    };
                     return copy;
                   });
                 }
-
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantIdRef.current
-                      ? { ...m, streaming: false }
-                      : m
-                  )
-                );
-
-                try {
-                  abortRef.current?.abort();
-                } catch (e) {}
-
+                abortRef.current?.abort();
                 break;
               }
             }
@@ -231,31 +213,17 @@ export default function useStreamChat(streamUrl, options = {}) {
         if (bufferRef.current) scheduleFlush();
 
         setMessages((prev) => {
-          const idx = assistantIndexLocal;
-          const mapped = prev.map((m, i) =>
-            i === idx ? { ...m, streaming: false } : m
+          const mapped = prev.map((m) =>
+            m.id === assistantIdRef.current ? { ...m, streaming: false } : m
           );
           return removeIfEmpty(
             mapped,
             mapped.findIndex((m) => m.id === assistantIdRef.current)
           );
         });
-
-        if (debug) console.debug("stream ended. endedBySignal:", endedBySignal);
       } catch (err) {
-        if (err?.name === "AbortError") {
-          if (debug)
-            console.log("stream aborted (expected if we called abort)");
-        } else {
-          if (debug) console.error("stream error:", err);
-          setMessages((prev) =>
-            prev.map((m, i) =>
-              i === assistantIndexLocal
-                ? { ...m, text: `[error] ${String(err)}`, streaming: false }
-                : m
-            )
-          );
-        }
+        if (err?.name !== "AbortError" && debug)
+          console.error("Stream error:", err);
       } finally {
         if (bufferRef.current) scheduleFlush();
         setIsStreaming(false);
@@ -277,51 +245,24 @@ export default function useStreamChat(streamUrl, options = {}) {
   const stopStreaming = useCallback(() => {
     try {
       abortRef.current?.abort();
-    } catch (e) {}
+    } catch {}
     abortRef.current = null;
-
     setIsStreaming(false);
 
     if (bufferRef.current) {
-      const finalChunk = bufferRef.current;
+      const chunk = bufferRef.current;
       bufferRef.current = "";
       setMessages((prev) => {
-        const aid = assistantIdRef.current;
-        let idx = aid ? prev.findIndex((m) => m.id === aid) : -1;
-        if (idx === -1) idx = findStreamingAssistantIndex(prev);
+        const idx = findStreamingAssistantIndex(prev);
         if (idx == null) return prev;
-        const copy = prev.slice();
-        const old = copy[idx];
+        const copy = [...prev];
         copy[idx] = {
-          ...old,
-          text: (old.text || "") + finalChunk,
+          ...copy[idx],
+          text: (copy[idx].text || "") + chunk,
           streaming: false,
         };
         return removeIfEmpty(copy, idx);
       });
-    } else {
-      setMessages((prev) => {
-        let copy = prev.map((m) =>
-          m.id === assistantIdRef.current ||
-          (m.role === "assistant" && m.streaming)
-            ? { ...m, streaming: false }
-            : m
-        );
-        let idx = assistantIdRef.current
-          ? copy.findIndex((m) => m.id === assistantIdRef.current)
-          : -1;
-        if (idx === -1) idx = findStreamingAssistantIndex(copy);
-        if (idx == null) return copy;
-        return removeIfEmpty(copy, idx);
-      });
-    }
-
-    assistantIdxRef.current = null;
-    assistantIdRef.current = null;
-
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
     }
   }, []);
 
@@ -332,5 +273,5 @@ export default function useStreamChat(streamUrl, options = {}) {
     };
   }, []);
 
-  return { messages, isStreaming, sendMessage, stopStreaming };
+  return { messages, isStreaming, sendMessage, stopStreaming, chat };
 }

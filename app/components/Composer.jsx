@@ -12,7 +12,6 @@ export default function Composer({
   const taRef = useRef(null);
 
   useEffect(() => {
-    // to avoid layout jitter
     const id = requestAnimationFrame(() => taRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, []);
@@ -32,7 +31,7 @@ export default function Composer({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Message Gemini..."
+          placeholder="Type something here..."
           rows={1}
           className={styles.textarea}
           disabled={disabled}
@@ -46,7 +45,7 @@ export default function Composer({
               onClick={onStop}
               title="Stop"
             >
-              <FiStopCircle size={20} />
+              <FiStopCircle size={18} />
             </button>
           ) : (
             <button
@@ -57,7 +56,7 @@ export default function Composer({
               disabled={!value.trim()}
               title="Send"
             >
-              <FiSend size={20} />
+              <FiSend size={18} />
             </button>
           )}
         </div>

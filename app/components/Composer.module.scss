@@ -1,0 +1,95 @@
+$form-bg: rgba(255, 255, 255, 0.7);
+$border-color: rgba(15, 23, 42, 0.1);
+$focus-ring: rgba(14, 165, 233, 0.5);
+
+.form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px;
+}
+
+.inputWrap {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    background: $form-bg;
+    border: 1px solid $border-color;
+    border-radius: 20px;
+    padding: 8px 12px;
+    box-shadow: 0 6px 20px rgba(2, 6, 23, 0.04);
+    backdrop-filter: blur(10px);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.inputWrap:focus-within {
+    border-color: $focus-ring;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* --- Textarea --- */
+.textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #0f172a;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.5;
+    padding: 8px;
+    max-height: 180px;
+}
+
+.textarea::placeholder {
+    color: #94a3b8;
+}
+
+/* --- Icons --- */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 6px;
+}
+
+.iconBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #0ea5e9;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.iconBtn:hover {
+    background: #0284c7;
+    transform: scale(1.05);
+}
+
+.iconBtn:active {
+    transform: scale(0.96);
+}
+
+/* Stop button uses warning tone */
+.stopBtn {
+    background: #dc2626;
+}
+
+.stopBtn:hover {
+    background: #b91c1c;
+}
+
+/* Disabled (send inactive) */
+.disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+    color: #475569;
+    pointer-events: none;
+}

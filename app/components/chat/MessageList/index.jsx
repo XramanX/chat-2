@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./MessageList.module.scss";
-import MessageBubble from "./MessageBubble";
+import MessageBubble from "../MessageBubble";
 
 export default function MessageList({ messages = [] }) {
   const listRef = useRef(null);
@@ -11,7 +11,6 @@ export default function MessageList({ messages = [] }) {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // auto-scroll to bottom on new messages
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;

@@ -1,15 +1,21 @@
-import React, { useEffect, useState, useRef } from "react";
-import { getChatList, createNewChat, deleteChat } from "../utils/chatStorage";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  getChatList,
+  createNewChat,
+  deleteChat,
+} from "../../../utils/chatStorage";
 import { FiMessageCircle, FiPlus, FiTrash2 } from "react-icons/fi";
-import NewChatModal from "./NewChatModal";
+import NewChatModal from "../../modals/NewChatModal";
+import ConfirmModal from "../../modals/ConfirmModal";
 import styles from "./ChatList.module.scss";
 
-export default function ChatList({ currentChatId, onSelect, onClose }) {
+export default function ChatList({ currentChatId, onSelect }) {
   const [chats, setChats] = useState([]);
   const [creating, setCreating] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [targetChat, setTargetChat] = useState(null);
   const mountedRef = useRef(true);
-  const rootRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -31,16 +37,21 @@ export default function ChatList({ currentChatId, onSelect, onClose }) {
     onSelect(newChat.id);
     setCreating(false);
     setModalOpen(false);
-    onClose?.();
   };
 
-  const handleDelete = async (id, e) => {
-    e?.stopPropagation();
-    await deleteChat(id);
+  const handleDeleteClick = (chat, e) => {
+    e.stopPropagation();
+    setTargetChat(chat);
+    setConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!targetChat) return;
+    await deleteChat(targetChat.id);
     const list = await getChatList();
     const deduped = Array.from(new Map(list.map((c) => [c.id, c])).values());
     if (mountedRef.current) setChats(deduped);
-    if (id === currentChatId) {
+    if (targetChat.id === currentChatId) {
       if (deduped.length) {
         const nextId = deduped[0].id;
         localStorage.setItem("last_active_chat", nextId);
@@ -50,37 +61,18 @@ export default function ChatList({ currentChatId, onSelect, onClose }) {
         onSelect(null);
       }
     }
+    setConfirmOpen(false);
+    setTargetChat(null);
   };
 
-  useEffect(() => {
-    if (!onClose) return;
-
-    const handlePointerDown = (e) => {
-      if (modalOpen) return;
-
-      const root = rootRef.current;
-      if (!root) return;
-
-      if (window.innerWidth > 768) return;
-
-      if (!root.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [onClose, modalOpen]);
-
   return (
-    <div className={styles.chatList} ref={rootRef}>
+    <div className={styles.chatList}>
       <div className={styles.header}>
         <h2>Chats</h2>
         <button
           className={styles.newBtn}
           onClick={() => setModalOpen(true)}
           disabled={creating}
-          aria-label="Create new chat"
         >
           <FiPlus size={16} />
         </button>
@@ -94,18 +86,7 @@ export default function ChatList({ currentChatId, onSelect, onClose }) {
               className={`${styles.chatItem} ${
                 c.id === currentChatId ? styles.active : ""
               }`}
-              onClick={() => {
-                onSelect(c.id);
-                onClose?.();
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  onSelect(c.id);
-                  onClose?.();
-                }
-              }}
+              onClick={() => onSelect(c.id)}
             >
               <div className={styles.left}>
                 <FiMessageCircle className={styles.icon} />
@@ -115,8 +96,7 @@ export default function ChatList({ currentChatId, onSelect, onClose }) {
               </div>
               <button
                 className={styles.deleteBtn}
-                onClick={(e) => handleDelete(c.id, e)}
-                aria-label={`Delete chat ${c.title}`}
+                onClick={(e) => handleDeleteClick(c, e)}
               >
                 <FiTrash2 />
               </button>
@@ -131,6 +111,18 @@ export default function ChatList({ currentChatId, onSelect, onClose }) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={handleConfirmNewChat}
+      />
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Delete Chat"
+        message={`Are you sure you want to delete “${
+          targetChat?.title || "this chat"
+        }”?`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmOpen(false)}
       />
     </div>
   );

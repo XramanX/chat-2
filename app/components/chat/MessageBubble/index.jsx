@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FiCopy, FiCheck } from "react-icons/fi";
-import { shortTimestamp } from "../utils/formatStream";
+import { shortTimestamp } from "../../../utils/formatStream";
 import styles from "./MessageBubble.module.scss";
-import StreamLoader from "./StreamLoader";
+import StreamLoader from "../StreamLoader";
 export default function MessageBubble({ message }) {
   const [copied, setCopied] = useState(false);
   const [clientTime, setClientTime] = useState("");

@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiCpu, FiMenu } from "react-icons/fi";
 import useStreamChat from "../hooks/useStreamChat";
-import MessageList from "../components/MessageList";
-import Composer from "../components/Composer";
-import ChatList from "../components/ChatList";
+import MessageList from "../components/chat/MessageList";
+import Composer from "../components/chat/Composer";
+import ChatList from "../components/chat/ChatList";
+import { getChatList } from "../utils/chatStorage";
 import styles from "./ChatPage.module.scss";
 
 const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
@@ -17,6 +18,7 @@ const STREAM_URL = `${BASE_URL}/${MODEL}:streamGenerateContent?alt=sse&key=${enc
 export default function ChatPage() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chatTitle, setChatTitle] = useState("Chat");
 
   const { messages, isStreaming, sendMessage, stopStreaming } = useStreamChat(
     STREAM_URL,
@@ -32,6 +34,20 @@ export default function ChatPage() {
     sendMessage(t);
   };
 
+  // 🧠 Fetch title whenever activeChatId changes
+  useEffect(() => {
+    async function fetchTitle() {
+      if (!activeChatId) {
+        setChatTitle("Chat");
+        return;
+      }
+      const list = await getChatList();
+      const current = list.find((c) => c.id === activeChatId);
+      setChatTitle(current?.title?.trim() || "Untitled Chat");
+    }
+    fetchTitle();
+  }, [activeChatId]);
+
   return (
     <div className={styles.page}>
       <aside className={`${styles.sidebar} ${menuOpen ? styles.open : ""}`}>
@@ -44,18 +60,22 @@ export default function ChatPage() {
           onClose={() => setMenuOpen(false)}
         />
       </aside>
+
       <div className={styles.container}>
         <header className={styles.header}>
           <button
             className={styles.menuBtn}
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menu"
           >
             <FiMenu />
           </button>
 
           <div className={styles.brand}>
             <FiCpu className={styles.logo} />
-            <h1 className={styles.title}>Chat</h1>
+            <h1 key={chatTitle} className={`${styles.title} ${styles.fade}`}>
+              {chatTitle}
+            </h1>
           </div>
         </header>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Modal from "./Modal";
+import Modal from "../Modal";
 import styles from "./NewChatModal.module.scss";
 
 export default function NewChatModal({ open, onClose, onConfirm }) {
